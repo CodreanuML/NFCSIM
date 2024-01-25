@@ -83,8 +83,40 @@ class Manager():
 
 
 
+class Connection():
+"""
+CALLING SEQUENCE : 
+1:CREATE_CONNECTION
+2:CONNECT
+3:GET_CONNECTION
+
+"""
+    _COM=None
+    def __init__(self):
+        print("New Connection established")
+
+    def create_connection(self):
+        # Create ProxiLAB COM object - create a new connection
+        self._COM=win32com.client.Dispatch("KEOLABS.ProxiLAB")
+    def connect(self):
+        # Test if ProxiLAB is connected
+        if (self._COM.IsConnected==0):
+            print("Connection Failed!-Check your ProxiLAB connection. ProxiLAB is not connected to your PC!")
+        else:  
+            # Import constants values
+            sys.path.append(self._COM.GetToolDirectory() + '\inc')
+            import ProxiLABUtilities
+    
+            # Reset ProxiLAB's configuration
+            self._COM.Settings.LoadDefaultConfig()
+
+            #Clear RGPA Output view
+            self._COM.Display.ClearOutput()
+    
 
 
+    def get_COM(self):
+        return self._COM
 
 def Test(proxilab):
     err = 0
@@ -134,24 +166,12 @@ def Main(proxilab):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 #PROGRAM ENTRY POINT
     
 if __name__ == "__main__":
     #Create and check connection ----- >>>>>>> Create a new connection and load default configurations <<<<<<< ---------------
 
+    """
     # Create ProxiLAB COM object - create a new connection
     ProxiLAB = win32com.client.Dispatch("KEOLABS.ProxiLAB")
 
@@ -168,14 +188,17 @@ if __name__ == "__main__":
 
         #Clear RGPA Output view
         ProxiLAB.Display.ClearOutput()
-    
+    """
 
-
+    ProxiConnection=Connection()
+    ProxiConnection.create_connection()
+    ProxiConnection.connect()
+    ProxiLAB=ProxiConnection.get_COM()
 
 
 
         #Call main function ----- >>>>>>> IN MAIN ARE ALLL MAIN FUNCTIONS CALLLED <<<<<<< ---------------
-        Main(ProxiLAB)
+    Main(ProxiLAB)
     
 
 
