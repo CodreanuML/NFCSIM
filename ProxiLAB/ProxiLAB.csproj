@@ -1,59 +1,326 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{95C6ACD4-6149-401F-805D-6EDCA75A7654}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ProxiLAB</RootNamespace>
-    <AssemblyName>ProxiLAB</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <Deterministic>true</Deterministic>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Class1.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <COMReference Include="ProxiLABLib">
-      <Guid>{CC1689B0-0EC0-4222-8C5C-FE627D6AD350}</Guid>
-      <VersionMajor>1</VersionMajor>
-      <VersionMinor>0</VersionMinor>
-      <Lcid>0</Lcid>
-      <WrapperTool>tlbimp</WrapperTool>
-      <Isolated>False</Isolated>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </COMReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-</Project>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;
+using System.Threading;
+
+using ProxiLABLib;
+using System.Security.Cryptography;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
+
+namespace ProxiLABDll
+{
+
+    /// <summary>
+    /// CLASS USED TO INSTANTIATE A NEW CONNECTION
+    /// </summary>
+    public class Connection
+    {
+        private IProxiLAB ProxiLAB;
+
+        public void connect()
+        {
+            this.ProxiLAB = (IProxiLAB)Activator.CreateInstance(Type.GetTypeFromProgID("KEOLABS.ProxiLAB"));
+
+        }
+
+        public int check_connection()
+        {
+            if (this.ProxiLAB.IsConnected == 0)
+            {
+
+                return 0;
+
+            }
+            else
+            {
+                return 1;
+            }
+        }
+
+        public IProxiLAB get_connection()
+        {
+
+            return ProxiLAB;
+        }
+
+
+    };
+
+    /// <summary>
+    /// CLASS USED AS AN ADAPTER BETWEEN ProxiLABInterface class and proxilabCALLS
+    /// IT's USED BECAUSE CANOE CAN ONLY USE STATIC CLASSES
+    /// </summary>
+    public class Emulator
+    {
+
+        /// <summary>
+        /// Hellper functions . Written in calling order
+        /// </summary>
+        
+        public void DisplayClearOutPut(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Display.ClearOutput();
+        }
+
+        public void SettingsMode(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Settings.Mode = 1;
+            proxiLAB.Emulator.ISO14443.TypeA.LoadDefaultConfig();
+        }
+
+        public void SpyStart(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Spy.Start();
+        }
+
+        public void SpyStop(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Spy.Stop();
+        }
+        public void Enable(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.Enable = 1;
+        }
+
+        public void Dissable(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.Enable = 0;
+        }
+
+        public void StartAnalyzer(IProxiLAB proxiLAB)
+        {
+            proxiLAB.Spy.Analyzer.Start();
+        }
+
+        /// <summary>
+        /// ISO14443.TypeA functions
+        /// </summary>
+        public void LoadDeselect(IProxiLAB proxiLAB,byte[] DESELECT,uint size)
+        {
+        
+
+
+            proxiLAB.Emulator.ISO14443.LoadSDeselect(ref DESELECT[0], size);
+        }
+
+        public void LoadSWTX(IProxiLAB proxiLAB,byte[] SWTX, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.LoadSWTX(ref SWTX[0],size);
+        }
+
+        public void LoadATQA(IProxiLAB proxiLAB, byte[] ATQA, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.LoadATQA(ref ATQA[0], size);
+        }
+
+        public void LoadUIDType(IProxiLAB proxiLAB,uint UID_Type)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.UIDType = UID_Type;
+        }
+
+        public void LoadUIDLength(IProxiLAB proxiLAB, uint UID_LEN)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.UIDLength = UID_LEN;
+        }
+
+        public void LoadUID(IProxiLAB proxiLAB,byte[] UID, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.LoadUID(ref UID[0],size);
+        }
+
+        public void LoadATS(IProxiLAB proxiLAB,byte[] ATS, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.LoadATS(ref ATS[0],size);
+        }
+
+        public void LoadSAKI(IProxiLAB proxiLAB,byte[] SAKI, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.LoadSAKI(ref SAKI[0], size);
+        }
+
+        public void LoadSAKC(IProxiLAB proxiLAB, byte[] SAKC, uint size)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.LoadSAKC(ref SAKC[0],size);
+            
+        }
+
+
+        /// <summary>
+        /// ISO14443.TypeA ISO DEP ACTIVATION SPEED Function
+        /// </summary>
+
+
+        public void LoadPPS(IProxiLAB proxiLAB, byte speed)
+        {
+            proxiLAB.Emulator.ISO14443.TypeA.PPS = speed;
+
+        }
+
+
+
+
+        /// <summary>
+        /// ISO14443.TypeA Transport Protocol Functions
+        /// </summary>
+
+        public ulong WaitAndGetFrame(IProxiLAB proxiLAB,uint timeout, byte[] buffer,uint buffersize,ref uint lepReturnSize)
+        {
+            return proxiLAB.Emulator.ISO14443.WaitAndGetFrame(timeout, out buffer[0], buffersize, out lepReturnSize);
+        }
+        
+
+        public ulong SendFrame(IProxiLAB proxiLAB,uint timeout, byte[] buffer, uint buffersize)
+        {
+            ulong err = 0;
+            err= proxiLAB.Emulator.ISO14443.SendFrame(timeout, ref buffer[0], buffersize);
+            return err;
+        }
+
+
+    }
+
+
+    /// <summary>
+    /// CANOE INTERFACE
+    /// </summary>
+
+    public static class ProxiLabInterface
+    {
+
+
+        private static IProxiLAB ProxiLAB = null;
+        private static Connection  ProxyLabConnection = new Connection();
+        private static Emulator ProxyEmulator =new Emulator();
+
+
+        public static void connect() {
+            ProxyLabConnection.connect();
+        }
+        private static int  check_connection() {
+        
+            return ProxyLabConnection.check_connection();
+  
+        }
+        public static void get_proxi()
+        {
+            ProxiLAB=ProxyLabConnection.get_connection();
+        }
+
+
+        public static void DisplayClearOutPut()
+        {
+            ProxyEmulator.DisplayClearOutPut(ProxiLAB);
+        }
+
+        public static void SettingsMode()
+        {
+            ProxyEmulator.SettingsMode(ProxiLAB);
+        }
+
+        public static void SpyStart()
+        {
+            ProxyEmulator.SpyStart(ProxiLAB);
+        }
+
+        public static void SpyStop()
+        {
+            ProxyEmulator.SpyStop(ProxiLAB);
+        }
+        public static  void Enable()
+        {
+            ProxyEmulator.Enable(ProxiLAB);
+        }
+
+        public static void Disable()
+        {
+            ProxyEmulator.Dissable(ProxiLAB);
+        }
+
+        public static void StartAnalyzer()
+        {
+            ProxyEmulator.StartAnalyzer(ProxiLAB);
+        }
+
+        /// <summary>
+        /// ISO14443.TypeA functions
+        /// </summary>
+        public static void LoadDeselect( byte[] DESELECT, uint size)
+        {
+
+
+
+            ProxyEmulator.LoadDeselect(ProxiLAB, DESELECT, size);
+        }
+
+        public static void LoadSWTX(byte[] SWTX, uint size)
+        {
+            ProxyEmulator.LoadSWTX(ProxiLAB, SWTX, size);
+        }
+
+        public static void LoadATQA( byte[] ATQA, uint size)
+        {
+            ProxyEmulator.LoadATQA(ProxiLAB, ATQA, size);
+        }
+
+        public static void LoadUIDType( uint UID_Type)
+        {
+            ProxyEmulator.LoadUIDType(ProxiLAB, UID_Type);
+        }
+
+        public static void LoadUIDLength( uint UID_LEN)
+        {
+            ProxyEmulator.LoadUIDLength(ProxiLAB, UID_LEN);
+        }
+
+        public static void LoadUID( byte[] UID, uint size)
+        {
+            ProxyEmulator.LoadUID(ProxiLAB,UID, size);
+        }
+
+        public static void LoadATS( byte[] ATS, uint size)
+        {
+            ProxyEmulator.LoadATS(ProxiLAB, ATS, size);
+        }
+
+        public static void LoadSAKI( byte[] SAKI, uint size)
+        {
+            ProxyEmulator.LoadSAKI(ProxiLAB,SAKI, size);
+        }
+
+        public static void LoadSAKC( byte[] SAKC, uint size)
+        {
+            ProxyEmulator.LoadSAKC(ProxiLAB, SAKC, size);
+
+        }
+        
+        
+        public static ulong WaitAndGetFrame(uint timeout, byte[] buffer, uint buffersize)
+        {
+        uint lepReturnSize =0;
+        ulong err = 0;
+        ProxyEmulator.WaitAndGetFrame(ProxiLAB, timeout,buffer,buffersize,ref lepReturnSize);
+
+        return lepReturnSize;
+        }
+
+
+
+   
+
+
+        public static ulong SendFrame( uint timeout, byte[] buffer, uint buffersize)
+        {
+            ulong err = 0;
+            ProxyEmulator.SendFrame(ProxiLAB,timeout, buffer, buffersize);
+            return err;
+        }
+
+
+
+
+    }
+
