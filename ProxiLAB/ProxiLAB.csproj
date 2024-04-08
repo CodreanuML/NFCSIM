@@ -148,6 +148,11 @@ namespace ProxiLABDll
             
         }
 
+        public void SetSWTX(IProxiLAB proxiLAB,uint value)
+        {
+            proxiLAB.Emulator.ISO14443.EnableSWTX = value;
+        }
+
 
         /// <summary>
         /// ISO14443.TypeA ISO DEP ACTIVATION SPEED Function
@@ -179,6 +184,16 @@ namespace ProxiLABDll
             err= proxiLAB.Emulator.ISO14443.SendFrame(timeout, ref buffer[0], buffersize);
             return err;
         }
+
+
+        public ulong WaitAndGetData(IProxiLAB proxiLAB,uint timeout , byte[] buffer, uint buffersize, ref uint lepReturnSize)
+        {
+
+            return proxiLAB.Emulator.WaitAndGetData(timeout, out buffer[0], buffersize, out lepReturnSize);
+
+        }
+
+
 
 
     }
@@ -296,8 +311,26 @@ namespace ProxiLABDll
             ProxyEmulator.LoadSAKC(ProxiLAB, SAKC, size);
 
         }
-        
-        
+        /// <summary>
+        /// Enables/Disables the S(WTX) request of PICC emulator.
+        // Read/Write: Read/Write
+        //Type: bool
+        //Value(s): { 0, 1}; 0: disable , 1: enable
+        //Default: 1
+        /// </summary>
+        /// <param name="value"></param>
+        public static void SetSWTX (uint value)
+        {
+            ProxyEmulator.SetSWTX(ProxiLAB, value);
+        }
+
+        /// <summary>
+        ///Used to get Frame Payload ->don't return metadata
+        /// </summary>
+        /// <param name="timeout"></param> 
+        /// <param name="buffer"></param>
+        /// <param name="buffersize"></param>
+        /// <returns></returns>
         public static ulong WaitAndGetFrame(uint timeout, byte[] buffer, uint buffersize)
         {
         uint lepReturnSize =0;
@@ -307,20 +340,45 @@ namespace ProxiLABDll
         return lepReturnSize;
         }
 
-
-
-   
-
-
+        /// <summary>
+        ///Used to send Frame Payload ->not  add metadata
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <param name="buffer"></param>
+        /// <param name="buffersize"></param>
+        /// <returns></returns>
         public static ulong SendFrame( uint timeout, byte[] buffer, uint buffersize)
         {
             ulong err = 0;
             ProxyEmulator.SendFrame(ProxiLAB,timeout, buffer, buffersize);
             return err;
         }
+        /// <summary>
+        ///Used to get Frame  ->metadata included
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <param name="buffer"></param>
+        /// <param name="buffersize"></param>
+        /// <returns></returns>
+
+        public static ulong WaitandGetData(uint timeout, byte[] buffer, uint buffersize)
+        {
+            uint lepReturnSize = 0;
+            ulong err = 0;
+            ProxyEmulator.WaitAndGetData(ProxiLAB, timeout, buffer, buffersize, ref lepReturnSize);
+            return lepReturnSize;
+
+        }
+
+
 
 
 
 
     }
 
+
+
+
+
+}
