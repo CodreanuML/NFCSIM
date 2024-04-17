@@ -3,6 +3,9 @@ import busio
 from digitalio import DigitalInOut
 from adafruit_pn532.spi import PN532_SPI
 import time
+import logging
+
+
 
 # IMPORRT COMMANDS FOR PCD
 
@@ -41,11 +44,12 @@ class NFC_setup():
 
 
 #board manager - created for low lvl interaction with NFC board - >>> used when board is set up as PCD (reader/Writer)
-class board_mngr_PCD():
+class board_manager_PCD():
 	
 	#create new NFC PCD socket,
 	def __init__(self):
-		print("Socket created")
+		logger_main.info("Socket created")
+		
 		self.adafruit_pn532=NFC_setup.initializare()
 
 
@@ -63,7 +67,7 @@ class board_mngr_PCD():
 	def get_raw_UID(self):
 		UID=self.adafruit_pn532.read_passive_target(timeout=0.5)
 		if (UID!=None):
-			print(len(UID))
+			
 			return UID
 		else :
 			return("Card Not Detected") 
@@ -83,12 +87,25 @@ class board_mngr_PCD():
 	#function used to activate ISO ISO14443-3 anticolission protocol
 	#function used to enlist a card and use it's UID for further data echange		
 	def enlist_target(self):
-	 		enlisted=self.adafruit_pn532.read_passive_target(timeout=2)
-	 		if (enlisted):
-	 			print(enlisted)
-	 			return 1 
-	 		else :
-	 			return 0
+		enlisted_UID=self.adafruit_pn532.read_passive_target(timeout=2)
+		list_UID=[]
+		uid_type=0
+		uid_values={1:"single",2:"double",3:"triple"}
+		if (enlisted_UID):
+			logger_main.info("Card Enlisted")
+			for i in range(0,len(enlisted_UID)):
+
+				list_UID.append(enlisted_UID[i])
+				uid_type=len(list_UID)//3
+			try: 
+				logger_main.info("UID Type -> {uidtype}".format(uidtype=uid_values[uid_type]))	
+			except:
+				logger_main.info("Unknown UID TYPE")	
+			logger_main.info("UID->"+str(list_UID))	 		
+
+			return 1 
+		else :
+			return 0
 
 	#function used to activate ISO/DEP ISO14443-4 data exchange speed 
 	# Allowed values 106 kbps / 212 kbps /424 kbps			
@@ -100,10 +117,10 @@ class board_mngr_PCD():
 		
 		if(val_sp>2 or val_sp<0):
 			val_sp=0
-			prin("Default speed Configuration ISO14443-4")
+			logger_main.info("Default speed Configuration ISO14443-4")
 
 		val_sp_dict={0:"106kbps",1:"212kbps",2:"424kbps"}
-		print("ISODEP Speed"+val_sp_dict[val_sp])
+		logger_main.info("ISODEP Speed"+val_sp_dict[val_sp])
 		PPS=send=self.adafruit_pn532.call_function(_COMMAND_INPSL,params=[0x01,speed[val_sp],speed[val_sp]])
 
 
@@ -111,17 +128,21 @@ class board_mngr_PCD():
 
 	#function used to echange RAW data APDU with PCD	
 	def write_apdu(self,apdu):
+		logger_main.info("APDU->Request"+str(apdu))
 		send=self.adafruit_pn532.call_function(_COMMAND_INDATAEXCHANGE,params=[0x01]+apdu,response_length=255)
+		response=[]
 		if (send):
-			print(send) 			
+			for i in range(0,len(send)):
 
-
+				response.append(send[i])
+				
+			logger_main.info("APDU<-Response:"+str(response)) 			
 
 
 class board_manager_PICC():
 	#create new NFC PCD socket,
 	def __init__(self):
-		print("Socket created")
+		logger_main.info("Socket created")
 		self.adafruit_pn532=NFC_setup.initializare()
 
 
@@ -146,7 +167,7 @@ class board_manager_PICC():
 		L_GENERAL_BYTES=[0x00]
 		L_HISTORICAL_BYTES=[0x0]
 		connection_response=self.adafruit_pn532.call_function(_COMMAND_TGINITASTARGET,params=MODE+NFC_SENS_RES+NFC_ID+SEL_RES+FELICA_PARAMETERS+NFCID3t+L_GENERAL_BYTES+L_HISTORICAL_BYTES,response_length=255)
-		print("RATS is :"+str(connection_response));
+		logger_main.info("RATS is :"+str(connection_response));
 
 
 
@@ -154,7 +175,7 @@ class board_manager_PICC():
 	#function used to get data from  a PCD 	
 	def PICC_GET_DATA(self):
 		get_data=self.adafruit_pn532.call_function(_COMMAND_TGGETDATA,response_length=255)
-		print(get_data)
+		logger_main.info(get_data)
 		if get_data :
 			return 1
 		else :
@@ -170,39 +191,89 @@ class board_manager_PICC():
 #program entry point 
 
 if __name__=="__main__":
+#logger SETTINGS
+
+# --------------------------------------------------------------FILE LOGGER SETTINGS --------------------------------------------------------------------------------------------------------------------------------------------
+#In Python's logging module, the severity levels are ranked hierarchically from least severe to most severe. Here's the ranking from lowest to highest:
+
+#DEBUG: Detailed information, typically of interest only when diagnosing problems.
+
+#INFO: Confirmation that things are working as expected. Typically used for general information about the program's execution.
+
+#WARNING: Indication that something unexpected happened or an issue might arise in the future, but the program can still continue execution.
+
+#ERROR: Indication of a more serious problem that has occurred during the program's execution. The program may not be able to continue running properly after an error occurs.
+
+#CRITICAL: Indication of a critical error that requires immediate attention. This level is reserved for very severe errors that may lead to the termination of the program.
+
+
+	logger_main = logging.getLogger("NFC.PY")
+
+
+# SET DEBUG LEVEL -> ERROR WARNING DEBUG INFO
+
+
+	logger_main.setLevel(logging.DEBUG)
+
+	console_handler = logging.StreamHandler()
+	console_handler.setLevel(logging.DEBUG)
+
+# Create a formatter and set it for the handler
+	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	console_handler.setFormatter(formatter)  # Corrected: Set formatter for the handler
+
+# Add the console handler to the logger
+	logger_main.addHandler(console_handler)
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+	
 
 	#Set MANAGER - AVAILABLE FOR PICC 
-	board_manager=board_manager_PICC()
-	print(board_manager.get_firmware_version())
-	board_manager.config()
+	#board_manager=board_manager_PICC()
+	#logger_main.info(board_manager.get_firmware_version())
+	#board_manager.config()
 
+
+
+	#Set MANAGER - AVAILABLE FOR PCD
+	board_manager=board_manager_PCD()
+	logger_main.info("Board Version - PN532 - {A} ".format(A=board_manager.get_firmware_version()))
+	board_manager.config()
 
 
 
 	#loop
 	while(True):
 
-		#CONFIG AS PCD
-		#card_status=board_manager.enlist_target()
+
 		
 		#CONFIG AS PICC
-		config_PICC=board_manager.config_PICC()		
-		
-		data=board_manager.PICC_GET_DATA()
-		if data :
-			board_manager.PICC_SET_DATA([0x90,0x00])
-		data=board_manager.PICC_GET_DATA()
-		if data:
-			board_manager.PICC_SET_DATA([0x90,0x00])
-		
-		# SEND APDU
-		#if(card_status):
-			#CONFIG PPS
-			#board_manager.configure_PPS(0)
 
+
+		#config_PICC=board_manager.config_PICC()		
+		#data=board_manager.PICC_GET_DATA()
+		#if data:
+		#	board_manager.PICC_SET_DATA([0x90,0x00])
+
+
+
+
+
+		#CONFIG AS PCD
+
+
+		card_status=board_manager.enlist_target()		
+		# SEND APDU
+		logger_main.debug("--------")
+		if(card_status):
+			#CONFIG PPS
+			board_manager.configure_PPS(2)
+			
 			#WRITE APDU
 			#board_manager.write_apdu([0x23,0x49])
-			#board_manager.write_apdu([0x00,0xA4,0x04,0x00,0x10,0xA0,0x00,0x00,0x06,0x04,0x53,0x6D,0x61,0x72,0x74,0x4B,0x65,0x79,0x00,0x01,0x01])
+			board_manager.write_apdu([0x00,0xA4,0x04,0x00,0x10,0xA0,0x00,0x00,0x06,0x04,0x53,0x6D,0x61,0x72,0x74,0x4B,0x65,0x79,0x00,0x01,0x01])
 		time.sleep(1)
 
 
