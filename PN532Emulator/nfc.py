@@ -7,18 +7,25 @@ import logging
 
 
 
-# IMPORRT COMMANDS FOR PCD
+# IMPORRT COMMANDS FOR ISO14443 Type A PCD"
 
 from adafruit_pn532.adafruit_pn532 import _COMMAND_INDATAEXCHANGE
 from adafruit_pn532.adafruit_pn532 import _COMMAND_INLISTPASSIVETARGET
 from adafruit_pn532.adafruit_pn532 import _COMMAND_INPSL
 
-#IMPORT COMMANDS FOR PICC
+#IMPORT COMMANDS FOR ISO14443 Type A PICC"
 
 from adafruit_pn532.adafruit_pn532 import _COMMAND_TGINITASTARGET
 from adafruit_pn532.adafruit_pn532 import _COMMAND_TGRESPONSETOINITIATOR
 from adafruit_pn532.adafruit_pn532 import _COMMAND_TGGETDATA
 from adafruit_pn532.adafruit_pn532 import _COMMAND_TGSETDATA
+
+
+#IMPORT COMMAND FOR MIFARE CLASSIC 
+
+
+from adafruit_pn532.adafruit_pn532 import MIFARE_CMD_AUTH_A 
+from adafruit_pn532.adafruit_pn532 import MIFARE_CMD_AUTH_B 
 
 
 # singleton class to set up SPI port to communicate with adafruit board
@@ -43,12 +50,89 @@ class NFC_setup():
 			return cls.cip
 
 
+
+#board manager - created for low lvl interaction with NFC board - >>> used when board is set up as PCD (reader/Writer) - > Mifare Classic Version
+class board_manager_MIFARE():
+	#create new NFC PCD socket,
+	def __init__(self):
+		logger_main.info("Socket created - Mifare classic")		
+		self.adafruit_pn532=NFC_setup.initializare()
+
+
+	#check firmware version and the connection	
+	def get_firmware_version(self):	
+		return self.adafruit_pn532.firmware_version
+
+	#config SAM on chipset	
+	def config(self):
+		self.adafruit_pn532.SAM_configuration()
+
+	#get a passive target	
+	def read_passive_target(self,timeout):
+		uid=self.adafruit_pn532.read_passive_target(timeout=timeout)
+		return uid
+
+	#authenticate command	
+	def mifare_classic_authenticate_block(self,uid,block_number: int,key_number:[0x60, 0x61],key) -> bool:
+		status=self.adafruit_pn532.mifare_classic_authenticate_block(uid,block_number,key_number,key)
+		if status:
+			logger_main.info("Key block successfully logged !")
+		else:
+			logger_main.info("Key block login failed ! ")
+
+	#read block		
+	def mifare_classic_read_block(self, block_number: int):  	
+		read_value =self.adafruit_pn532.mifare_classic_read_block(block_number)
+		if read_value==None :
+			logger_main.info("Block not read !")
+		else : 
+			return read_value
+
+	#write block		
+	def mifare_classic_write_block(self, block_number: int, data) -> bool:
+		write_value = self.adafruit_pn532.mifare_classic_write_block(block_number,data)
+		if write_value :
+			logger_main.info("Block successfully written")
+		else :
+			logger_main.info("Block writing failed !")	
+
+    #format a block to be a value block
+	def mifare_classic_fmt_value_block(self, block_number: int, initial_value: int, address_block: int = 0) -> bool:
+		status =self.adafruit_pn532.mifare_classic_fmt_value_block(block_number,initial_value)
+		if status :
+			logger_main.info("Block number {no} successfully formated to value block !" .format(no=block_number))
+		else :
+			logger_main.info("Block number {no} formatation to value block failed ! " .format(no=block_number))
+
+	#return a value block value		
+	def mifare_classic_get_value_block(self, block_number: int) -> int:
+		get_result = self.adafruit_pn532.mifare_classic_get_value_block(block_number)
+		logger_main.info("Block number " + str(block_number) + " has value " + str(get_result))
+
+	#subtract a value from a value block		
+	def mifare_classic_sub_value_block(self, block_number: int, amount: int) -> bool:
+		substraciton_result=self.adafruit_pn532.mifare_classic_sub_value_block(block_number,amount)
+		if substraciton_result :
+			logger_main.info("Block number {no} successfully decreased with value {value} !".format(no=block_number,value=amount))
+		else :
+			logger_main.info("Substraction failed ! ")
+
+	#add a value to a value block		
+	def mifare_classic_add_value_block(self, block_number: int, amount: int) -> bool:
+		add_result=self.adafruit_pn532.mifare_classic_add_value_block(block_number,amount)
+		if add_result :
+			logger_main.info("Block number {no} successfully incresed with value {value} !".format(no=block_number,value=amount))
+		else:
+			logger_main.info("Adition failed !")
+
+
+
 #board manager - created for low lvl interaction with NFC board - >>> used when board is set up as PCD (reader/Writer)
 class board_manager_PCD():
 	
 	#create new NFC PCD socket,
 	def __init__(self):
-		logger_main.info("Socket created")
+		logger_main.info("Socket created - ISO14443 Type A PCD")
 		
 		self.adafruit_pn532=NFC_setup.initializare()
 
@@ -142,7 +226,7 @@ class board_manager_PCD():
 class board_manager_PICC():
 	#create new NFC PCD socket,
 	def __init__(self):
-		logger_main.info("Socket created")
+		logger_main.info("Socket created - ISO14443 Type A PICC")
 		self.adafruit_pn532=NFC_setup.initializare()
 
 
@@ -228,27 +312,33 @@ if __name__=="__main__":
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-	
-
+																
+	#------------------------------------------------------------------------------------- ISO14443 Type A  PICC 
 	#Set MANAGER - AVAILABLE FOR PICC 
 	#board_manager=board_manager_PICC()
-	#logger_main.info(board_manager.get_firmware_version())
+	#logger_main.info("Board Version - PN532 - {A} ".format(A=board_manager.get_firmware_version()))
 	#board_manager.config()
 
 
-
+	#------------------------------------------------------------------------------------- ISO14443 Type A  PCD
 	#Set MANAGER - AVAILABLE FOR PCD
-	board_manager=board_manager_PCD()
+	#board_manager=board_manager_PCD()
+	#logger_main.info("Board Version - PN532 - {A} ".format(A=board_manager.get_firmware_version()))
+	#board_manager.config()
+
+	#-------------------------------------------------------------------------------------  MIFARE CLASSIC PCD
+	#Set MANAGER - AVAILABLE FOR MIFARE CLASSIC PCD 
+	board_manager=board_manager_MIFARE()
 	logger_main.info("Board Version - PN532 - {A} ".format(A=board_manager.get_firmware_version()))
 	board_manager.config()
-
+	key = b"\xFF\xFF\xFF\xFF\xFF\xFF"
 
 
 	#loop
 	while(True):
 
 
-		
+		#------------------------------------------------------------------------------------- ISO14443 Type A  PICC 
 		#CONFIG AS PICC
 
 
@@ -258,24 +348,68 @@ if __name__=="__main__":
 		#	board_manager.PICC_SET_DATA([0x90,0x00])
 
 
-
-
-
+		#------------------------------------------------------------------------------------- ISO14443 Type A  PCD
 		#CONFIG AS PCD
 
 
-		card_status=board_manager.enlist_target()		
+		#card_status=board_manager.enlist_target()		
 		# SEND APDU
-		logger_main.debug("--------")
-		if(card_status):
-			#CONFIG PPS
-			board_manager.configure_PPS(2)
-			
+		#logger_main.debug("--------")
+		#if(card_status):
+		#	#CONFIG PPS
+		#	board_manager.configure_PPS(2)
+			 
 			#WRITE APDU
 			#board_manager.write_apdu([0x23,0x49])
-			board_manager.write_apdu([0x00,0xA4,0x04,0x00,0x10,0xA0,0x00,0x00,0x06,0x04,0x53,0x6D,0x61,0x72,0x74,0x4B,0x65,0x79,0x00,0x01,0x01])
-		time.sleep(1)
+		#	board_manager.write_apdu([0x00,0xA4,0x04,0x00,0x10,0xA0,0x00,0x00,0x06,0x04,0x53,0x6D,0x61,0x72,0x74,0x4B,0x65,0x79,0x00,0x01,0x01])
+		#time.sleep(1)
+
+		#-------------------------------------------------------------------------------------  MIFARE CLASSIC PCD
+		#Set MANAGER - AVAILABLE FOR MIFARE CLASSIC PCD 
+		logger_main.debug("--------")
+    	# Check if a card is available to read
+		uid = board_manager.read_passive_target(timeout=0.5)
+		if uid != None :
+			logger_main.info("Card logged with uid " + str(uid))
+    	# Try again if no card is available.
+
+    	#Write - read a block 
+		#if uid is not None:
+			
+
+			print("Found card with UID:", [hex(i) for i in uid])
+			print("Authenticating block 4 ...")
+
+			board_manager.mifare_classic_authenticate_block(uid, 4, MIFARE_CMD_AUTH_B, key)
+
+		# Set 16 bytes of block to 0xFEEDBEEF
+		#	data = bytearray(16)
+		#	data[0:16] = b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 
 
+		#Perform authentication
+		#board_manager.mifare_classic_authenticate_block(uid, 4, MIFARE_CMD_AUTH_B, key)
 
-#[0x00,0xA4,0x04,0x00,0x10,0xA0,0x00,0x00,0x06,0x04,0x53,0x6D,0x61,0x72,0x74,0x4B,0x65,0x79,0x00,0x01,0x01]
+		# Write 16 byte block.
+		#	board_manager.mifare_classic_write_block(4, data)
+		# Read block #6
+		#	logger_main.info("Wrote to block 4, now trying to read that data:"+str(board_manager.mifare_classic_read_block(4)))
+		#	break
+
+		#time.sleep(1)
+
+
+		#Configure a block to be value block
+		#if uid is not None :
+			#Perform authentication
+		#	board_manager.mifare_classic_authenticate_block(uid, 4, MIFARE_CMD_AUTH_B, key)
+		#	board_manager.mifare_classic_fmt_value_block(4,1)
+		#	break
+
+		#Perform actions on value block	
+		if uid is not None :
+			
+			board_manager.mifare_classic_add_value_block(4,50)
+			board_manager.mifare_classic_get_value_block(4)
+			board_manager.mifare_classic_sub_value_block(4,20)
+			board_manager.mifare_classic_get_value_block(4)
