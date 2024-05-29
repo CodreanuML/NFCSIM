@@ -1,16 +1,10 @@
-import PN532_M as nfc
-from machine import Pin, SPI
+import nfc_stack as nfc_stack
+  
+#enter point for our program :
 
-# SPI
-spi_dev = SPI(0, baudrate=1000000)
-cs = Pin(16, Pin.OUT)
-cs.on()
 
-# SENSOR INIT
-pn532 = nfc.PN532(spi_dev,cs)
+pn532 = nfc_stack.NFC_setup.initializare()
 ic, ver, rev, support = pn532.get_firmware_version()
 print('Found PN532 with firmware version: {0}.{1}'.format(ver, rev))
-
-# Configure PN532 to communicate with MiFare cards
-pn532.SAM_configuration()
-  
+while True :
+    pass 
