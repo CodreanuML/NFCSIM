@@ -1,20 +1,3 @@
-# @Author: carlosgilgonzalez
-# @Date:   2019-10-15T16:13:47+01:00
-# @Last modified by:   carlosgilgonzalez
-# @Last modified time: 2019-10-15T16:56:27+01:00
-
-
-# Original work:
-# Adafruit PN532 NFC/RFID control library.
-# Author: Tony DiCola
-
-# Partial Port to Micropython:
-# Micropython PN532 NFC/RFID control library.
-# Author: Carlos Gil Gonzalez
-"""
-Micropython PN532 NFC/RFID control library (SPI)
-https://github.com/Carglglz/NFC_PN532_SPI
-"""
 
 import time
 from machine import Pin
