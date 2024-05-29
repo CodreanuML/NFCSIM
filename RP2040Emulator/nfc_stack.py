@@ -1,6 +1,7 @@
 import PN532_M as nfc
 from machine import Pin, SPI
 
+
 # SPI
 #spi_dev = SPI(0, baudrate=1000000)
 #cs = Pin(16, Pin.OUT)
