@@ -3,8 +3,8 @@ import time
 from machine import Pin
 from micropython import const
 
-# __version__ = "0.0.0-auto.0"
-# __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_PN532.git"
+
+
 
 # pylint: disable=bad-whitespace
 _PREAMBLE = const(0x00)
@@ -41,6 +41,10 @@ MIFARE_CMD_AUTH_A = const(0x60)
 MIFARE_CMD_AUTH_B = const(0x61)
 MIFARE_CMD_READ = const(0x30)
 MIFARE_CMD_WRITE = const(0xA0)
+MIFARE_CMD_TRANSFER = const(0xB0)
+MIFARE_CMD_DECREMENT = const(0xC0)
+MIFARE_CMD_INCREMENT = const(0xC1)
+MIFARE_CMD_STORE = const(0xC2)
 MIFARE_ULTRALIGHT_CMD_WRITE = const(0xA2)
 
 # Known keys
@@ -366,6 +370,24 @@ class PN532:
             return None
         # Return first 4 bytes since 16 bytes are always returned.
         return response[1:]
+    def mifare_classic_write_block(self, block_number, data):
+        """Write a block of data to the card.  Block number should be the block
+        to write and data should be a byte array of length 16 with the data to
+        write.  If the data is successfully written then True is returned,
+        otherwise False is returned.
+        """
+        assert data is not None and len(data) == 16, 'Data must be an array of 16 bytes!'
+        # Build parameters for InDataExchange command to do MiFare classic write.
+        params = bytearray(19)
+        params[0] = 0x01  # Max card numbers
+        params[1] = MIFARE_CMD_WRITE
+        params[2] = block_number & 0xFF
+        params[3:] = data
+        # Send InDataExchange request.
+        response = self.call_function(_COMMAND_INDATAEXCHANGE,
+                                      params=params,
+                                      response_length=1)
+        return response[0] == 0x00
 
     def mifare_classic_authenticate_block(self, uid, block_number, key_number=MIFARE_CMD_AUTH_B, key=KEY_DEFAULT_B):  # pylint: disable=invalid-name
         """Authenticate specified block number for a MiFare classic card.  Uid
@@ -389,3 +411,121 @@ class PN532:
             _COMMAND_INDATAEXCHANGE, params=params, response_length=1
         )
         return response[0] == 0x00
+    
+    
+
+    def mifare_classic_sub_value_block(self, block_number: int, amount: int) -> bool:
+        """Decrease the balance of a value block. Block number should be the block
+        to change and amount should be an integer up to a maximum of 2147483647.
+        If the value block is successfully updated then True is returned,
+        otherwise False is returned.
+        """
+        params = [0x01, MIFARE_CMD_DECREMENT, block_number & 0xFF]
+        params.extend(list(amount.to_bytes(4, "little")))
+
+        response = self.call_function(
+            _COMMAND_INDATAEXCHANGE, params=params, response_length=1
+        )
+        if response[0] != 0x00:
+            return False
+
+        response = self.call_function(
+            _COMMAND_INDATAEXCHANGE,
+            params=[0x01, MIFARE_CMD_TRANSFER, block_number & 0xFF],
+            response_length=1,
+        )
+
+        return response[0] == 0x00
+
+    def mifare_classic_add_value_block(self, block_number: int, amount: int) -> bool:
+        """Increase the balance of a value block. Block number should be the block
+        to change and amount should be an integer up to a maximum of 2147483647.
+        If the value block is successfully updated then True is returned,
+        otherwise False is returned.
+        """
+        params = [0x01, MIFARE_CMD_INCREMENT, block_number & 0xFF]
+        params.extend(list(amount.to_bytes(4, "little")))
+
+        response = self.call_function(
+            _COMMAND_INDATAEXCHANGE, params=params, response_length=1
+        )
+        if response[0] != 0x00:
+            return False
+
+        response = self.call_function(
+            _COMMAND_INDATAEXCHANGE,
+            params=[0x01, MIFARE_CMD_TRANSFER, block_number & 0xFF],
+            response_length=1,
+        )
+
+        return response[0] == 0x00
+
+    def mifare_classic_get_value_block(self, block_number: int) -> int:
+        block = self.mifare_classic_read_block(block_number=block_number)
+        if block is None:
+            return None
+
+        value = block[0:4]
+        value_inverted = block[4:8]
+        value_backup = block[8:12]
+
+        if value != value_backup:
+            raise RuntimeError(
+                "Value block bytes 0-3 do not match 8-11: "
+                + "".join("%02x" % b for b in block)
+            )
+        if value_inverted != bytearray(b ^ 0xFF for b in value):
+            raise RuntimeError(
+            "Inverted value block bytes 4-7 not valid: "
+                + "".join("%02x" % b for b in block)
+            )
+
+    # Manually convert the bytearray to an integer (little-endian)
+        value_int = value[0] | (value[1] << 8) | (value[2] << 16) | (value[3] << 24)
+
+        return value_int
+
+
+    def mifare_classic_fmt_value_block(self, block_number: int, initial_value: int, address_block: int = 0) -> bool:
+
+        try:
+        # Ensure initial value is within range
+            if not (0 <= initial_value <= 2147483647):
+                raise ValueError("Initial value must be between 0 and 2147483647.")
+        
+        # Initial value as bytes
+            initial_value_bytes = initial_value.to_bytes(4, "little")
+            print(f"Initial Value Bytes: {initial_value_bytes}, Type: {type(initial_value_bytes)}")
+
+        # Create bytearray for the data
+            data = bytearray()
+        
+        # Add the value to the bytearray
+            data.extend(initial_value_bytes)
+            print(f"Data after adding initial value: {data}, Type: {type(data)}")
+        
+        # Inverted value as bytearray
+            inverted_value = bytearray(b ^ 0xFF for b in initial_value_bytes)
+            print(f"Inverted Value Bytes: {inverted_value}, Type: {type(inverted_value)}")
+            data.extend(inverted_value)
+            print(f"Data after adding inverted value: {data}, Type: {type(data)}")
+        
+        # Duplicate value
+            data.extend(initial_value_bytes)
+            print(f"Data after adding duplicate value: {data}, Type: {type(data)}")
+        
+        # Convert address block to a single byte
+            address_block_byte = address_block.to_bytes(1, "little")[0]
+            address_block_bytes = bytearray([
+                address_block_byte, address_block_byte ^ 0xFF,
+                address_block_byte, address_block_byte ^ 0xFF
+            ])
+            print(f"Address Block Bytes: {address_block_bytes}, Type: {type(address_block_bytes)}")
+            data.extend(address_block_bytes)
+            print(f"Final Data: {data}, Type: {type(data)}")
+        
+        # Write the formatted data to the specified block
+            return self.mifare_classic_write_block(block_number, data)
+        except Exception as e:
+            print(f"Error: {e}")
+            return False
